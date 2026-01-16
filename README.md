@@ -1,0 +1,2 @@
+# maibot_msg_ermoji_like_plugin
+MaiBot贴表情插件插件
