@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "name": "麦麦贴表情插件",
   "version": "1.0.0",
-  "description": "给麦麦添加贴表情能力",
+  "description": "让麦麦能在群聊中贴表情",
   "author": {
     "name": "鲨鱼",
     "url": "https://github.com/HyperSharkawa"

@@ -28,34 +28,39 @@ class MessageReactAction(BaseAction):
     """处理消息反应的 Action"""
     action_name = "msg_react"
     action_description = (
-        f"向指定群聊消息“贴表情”（添加 reaction），表情会显示在对应消息的下面，用于对已有消息做轻量反馈或情绪表达。"
-        f"这个动作不会发送消息内容，仅会有一个弱提示。"
-        f"你能且**只能**从下列表情列表中选择1个表情放到emoji参数中: {json.dumps(list(available_emojis.keys()), ensure_ascii=False)}"
+        "向指定群聊消息“贴表情”（添加 reaction），表情会显示在对应消息的下面。"
+        "这个动作不会发送消息内容，仅会有一个弱提示。"
+        "msg_react action不视为回复消息,使用该动作不影响回复频率。你可以同时使用msg_react和任何其他动作。"
     )
     parallel_action = True
     activation_type = ActionActivationType.ALWAYS
     action_require = [
-        "想针对某条消息表达情绪时",
-        "想对某条消息做出反应但又不想直接reply或emoji时",
+        "想对消息添加表情反应时",
+        "想对某条消息做出轻量反应且不想reply或emoji时",
         "别人让你贴表情时",
-        "注意: msg_react action不视为回复消息,使用该动作不影响回复频率。你可以同时使用msg_react和任何其他动作。",
+        "注意: msg_react不应该作为emoji和reply的替代，请优先使用emoji和reply。",
     ]
     associated_types = ["text", "emoji"]
-    action_parameters = {"emoji_name": "必填参数，要贴的表情名称"}
+    action_parameters = {}
 
+    emojis_string = json.dumps(list(available_emojis.keys()), ensure_ascii=False)
     async def execute(self) -> Tuple[bool, str]:
         """执行贴表情动作"""
         if not self.is_group:
+            # 存储一个执行失败的动作信息
+            await database_api.store_action_info(
+                self.chat_stream,
+                True,
+                f"[贴表情消息: 贴表情失败，无法在私聊中贴表情]",
+                False,
+                self.thinking_id,
+                self.action_data,
+                self.action_name)
             return False, "只有群聊才能贴表情！"
 
-        emoji_name = self.action_data.get("emoji_name", "")
-        emoji_id = available_emojis.get(emoji_name, None)
-        if not emoji_id:
-            logger.warning(f"决策选择的表情无法识别: {emoji_name}，使用LLM重新选择表情")
-            # 使用LLM重新选择表情
-            emoji_name, emoji_id = await self.select_emoji()
+        emoji_name, emoji_id = await self.select_emoji()
         if not emoji_name or not emoji_id:
-            logger.error("选择的表情无法识别，且重新选择表情也失败")
+            logger.error("选择的表情无法识别")
             return False, "选择的表情无法识别，贴表情失败！"
 
         # 发送贴表情命令
